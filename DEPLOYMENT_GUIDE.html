@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgentFlow — Cloud Run Deployment Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;600&display=swap');
+
+  :root {
+    --blue: #1a73e8;
+    --green: #34a853;
+    --yellow: #fbbc04;
+    --red: #ea4335;
+    --dark: #1f2937;
+    --mid: #374151;
+    --light: #6b7280;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --code-bg: #0f172a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Google Sans', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+    padding: 48px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: 120px;
+    width: 180px; height: 180px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  header h1 { font-size: 36px; font-weight: 700; margin-bottom: 8px; }
+  header p  { font-size: 16px; opacity: 0.85; max-width: 600px; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+  /* ── Progress Bar ── */
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    overflow-x: auto;
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-label { font-size: 13px; font-weight: 500; color: var(--mid); }
+  .step-arrow { margin: 0 12px; color: var(--border); font-size: 18px; }
+
+  /* ── Section Cards ── */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+  }
+  .step-badge {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 18px; font-weight: 700; }
+  .section-header p  { font-size: 13px; color: var(--light); margin-top: 2px; }
+  .section-body { padding: 24px; }
+
+  /* ── Code Blocks ── */
+  .code-block {
+    background: var(--code-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .code-lang { font-size: 12px; color: #94a3b8; font-family: 'Roboto Mono', monospace; }
+  .copy-btn {
+    font-size: 11px;
+    color: #64748b;
+    background: none;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { color: white; border-color: #64748b; }
+  pre {
+    padding: 18px;
+    overflow-x: auto;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #e2e8f0;
+  }
+  .c-green  { color: #4ade80; }
+  .c-blue   { color: #60a5fa; }
+  .c-yellow { color: #fbbf24; }
+  .c-gray   { color: #64748b; }
+  .c-red    { color: #f87171; }
+  .c-purple { color: #c084fc; }
+
+  /* ── Info Boxes ── */
+  .info-box {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .info-box.blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .info-box.green  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .info-box.yellow { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .info-box.red    { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .info-icon { font-size: 18px; flex-shrink: 0; }
+
+  /* ── File Tree ── */
+  .file-tree {
+    background: var(--code-bg);
+    border-radius: 10px;
+    padding: 18px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    color: #e2e8f0;
+    line-height: 2;
+  }
+  .ft-dir   { color: #60a5fa; font-weight: 600; }
+  .ft-file  { color: #94a3b8; }
+  .ft-new   { color: #4ade80; }
+
+  /* ── Checklist ── */
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── URL Box ── */
+  .url-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+  .url-label { font-size: 12px; color: #166534; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .url-value { font-family: 'Roboto Mono', monospace; font-size: 14px; color: #15803d; font-weight: 600; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .mini-card {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .mini-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .mini-card p  { font-size: 13px; color: var(--light); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--light);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+  footer strong { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-badge">🚀 Deployment Guide</div>
+  <h1>AgentFlow — Cloud Run Deployment</h1>
+  <p>Build and deploy your AI Agent on Google Cloud Run using ADK, MCP &amp; AlloyDB AI. Step-by-step guide for Umesh Nithyanandh.</p>
+</header>
+
+<div class="container">
+
+  <!-- Progress -->
+  <div class="progress">
+    <div class="step-item"><div class="step-num">1</div><span class="step-label">Enable Billing</span></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item"><div class="step-num">2</div><span class="step-label">Install Tools</span></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item"><div class="step-num">3</div><span class="step-label">Setup Project</span></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item"><div class="step-num">4</div><span class="step-label">Write Code</span></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item"><div class="step-num">5</div><span class="step-label">Deploy</span></div>
+    <span class="step-arrow">›</span>
+    <div class="step-item"><div class="step-num">6</div><span class="step-label">Test Live URL</span></div>
+  </div>
+
+  <!-- ── STEP 1: BILLING ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#ea4335;">1</div>
+      <div>
+        <h2>Enable Google Cloud Billing</h2>
+        <p>Required to use Cloud Run, Vertex AI, and AlloyDB</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="info-box yellow">
+        <span class="info-icon">⚠️</span>
+        <div><strong>Important:</strong> Cloud Run has a generous free tier (2M requests/month free). You will NOT be charged unless you exceed free limits. Enable billing to unlock the services.</div>
+      </div>
+      <ul class="checklist">
+        <li><span class="check-icon">1️⃣</span><div>Go to <strong>console.cloud.google.com</strong> → Sign in with your Google account</div></li>
+        <li><span class="check-icon">2️⃣</span><div>Click the top-left menu → <strong>Billing</strong> → Link a billing account (use a debit/credit card — you get $300 free credits as a new user)</div></li>
+        <li><span class="check-icon">3️⃣</span><div>Create a new project: Click dropdown at top → <strong>New Project</strong> → Name it <code>agentflow-project</code></div></li>
+        <li><span class="check-icon">4️⃣</span><div>Enable APIs: Go to <strong>APIs &amp; Services → Enable APIs</strong> and enable: <strong>Cloud Run, Vertex AI, Cloud Build, Artifact Registry</strong></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: INSTALL TOOLS ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#1a73e8;">2</div>
+      <div>
+        <h2>Install Required Tools</h2>
+        <p>Google Cloud SDK + Python 3.11 + Docker</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="info-box blue">
+        <span class="info-icon">💡</span>
+        <div><strong>Easiest option:</strong> Use <strong>Google Cloud Shell</strong> — it has all tools pre-installed. Go to console.cloud.google.com and click the <strong>&gt;_</strong> icon at the top right.</div>
+      </div>
+
+      <p style="margin-bottom:8px;font-weight:600;">Option A — Use Google Cloud Shell (Recommended, Zero Setup):</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <pre><span class="c-gray"># Cloud Shell already has gcloud, python3, docker pre-installed
+# Just open Cloud Shell and you're ready!</span>
+gcloud --version
+python3 --version
+docker --version</pre>
+      </div>
+
+      <p style="margin:16px 0 8px;font-weight:600;">Option B — Install on your laptop (Windows/Mac/Linux):</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <pre><span class="c-gray"># Step 1: Install Google Cloud SDK</span>
+<span class="c-gray"># Visit: https://cloud.google.com/sdk/docs/install</span>
+<span class="c-gray"># Download and run the installer for your OS</span>
+
+<span class="c-gray"># Step 2: Login to your Google account</span>
+gcloud auth login
+gcloud auth application-default login
+
+<span class="c-gray"># Step 3: Install Python 3.11</span>
+<span class="c-gray"># Visit: https://www.python.org/downloads/</span>
+
+<span class="c-gray"># Step 4: Install Docker Desktop</span>
+<span class="c-gray"># Visit: https://www.docker.com/products/docker-desktop/</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: SETUP PROJECT ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#34a853;">3</div>
+      <div>
+        <h2>Setup Google Cloud Project</h2>
+        <p>Configure your project ID and enable required services</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — Run these commands one by one</span></div>
+        <pre><span class="c-gray"># Set your project (replace with your actual project ID)</span>
+gcloud config set project <span class="c-yellow">agentflow-project</span>
+
+<span class="c-gray"># Set default region (choose one close to you)</span>
+gcloud config set run/region <span class="c-yellow">asia-south1</span>   <span class="c-gray"># Mumbai (closest for India)</span>
+
+<span class="c-gray"># Enable all required APIs</span>
+gcloud services enable \
+  run.googleapis.com \
+  aiplatform.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  secretmanager.googleapis.com
+
+<span class="c-gray"># Verify billing is active</span>
+gcloud beta billing projects describe <span class="c-yellow">agentflow-project</span></pre>
+      </div>
+      <div class="info-box green">
+        <span class="info-icon">✅</span>
+        <div>The <strong>asia-south1 (Mumbai)</strong> region gives you the best latency if you're in India/APAC.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: CODE FILES ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#fbbc04;color:#1f2937;">4</div>
+      <div>
+        <h2>Project Files</h2>
+        <p>Create this folder structure with the provided code files</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <p style="margin-bottom:12px;font-weight:600;">📁 Folder Structure:</p>
+      <div class="file-tree">
+        <div><span class="ft-dir">agentflow/</span></div>
+        <div>&nbsp;&nbsp;├── <span class="ft-new">main.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#475569">← FastAPI server (provided)</span></div>
+        <div>&nbsp;&nbsp;├── <span class="ft-new">agent.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#475569">← ADK agent logic (provided)</span></div>
+        <div>&nbsp;&nbsp;├── <span class="ft-new">requirements.txt</span> <span style="color:#475569">← Python packages (provided)</span></div>
+        <div>&nbsp;&nbsp;├── <span class="ft-new">Dockerfile</span> &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#475569">← Container config (provided)</span></div>
+        <div>&nbsp;&nbsp;└── <span class="ft-new">.env.example</span> &nbsp;<span style="color:#475569">← Environment variables template</span></div>
+      </div>
+
+      <div class="info-box blue" style="margin-top:16px;">
+        <span class="info-icon">📥</span>
+        <div><strong>Download all 4 code files</strong> from this guide (main.py, agent.py, requirements.txt, Dockerfile) and place them in a folder called <code>agentflow/</code> on your computer or Cloud Shell.</div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — Create the project folder in Cloud Shell</span></div>
+        <pre><span class="c-gray"># Create project folder</span>
+mkdir agentflow && cd agentflow
+
+<span class="c-gray"># Upload files using Cloud Shell's Upload button (top right)</span>
+<span class="c-gray"># OR create them directly:</span>
+nano main.py     <span class="c-gray"># paste content from main.py</span>
+nano agent.py    <span class="c-gray"># paste content from agent.py</span>
+nano requirements.txt
+nano Dockerfile</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 5: DEPLOY ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#1a73e8;">5</div>
+      <div>
+        <h2>Deploy to Cloud Run</h2>
+        <p>Build the container and deploy — one command does everything</p>
+      </div>
+    </div>
+    <div class="section-body">
+
+      <p style="font-weight:600;margin-bottom:8px;">🚀 Option A — Deploy directly from source (Easiest):</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <pre><span class="c-gray"># Make sure you're inside the agentflow/ folder</span>
+cd agentflow
+
+<span class="c-gray"># Deploy! Cloud Build will build the Docker image automatically</span>
+gcloud run deploy <span class="c-yellow">agentflow</span> \
+  --source . \
+  --region <span class="c-yellow">asia-south1</span> \
+  --allow-unauthenticated \
+  --set-env-vars <span class="c-green">GOOGLE_CLOUD_PROJECT</span>=agentflow-project \
+  --set-env-vars <span class="c-green">GEMINI_MODEL</span>=gemini-1.5-pro \
+  --memory 1Gi \
+  --cpu 1 \
+  --min-instances 0 \
+  --max-instances 10</pre>
+      </div>
+
+      <div class="info-box yellow">
+        <span class="info-icon">⏳</span>
+        <div><strong>Takes 3–5 minutes</strong> on first deploy (building the Docker image). Subsequent deploys are faster (~1 min).</div>
+      </div>
+
+      <p style="font-weight:600;margin:16px 0 8px;">🐳 Option B — Build Docker image manually then deploy:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span></div>
+        <pre><span class="c-gray"># Build and push Docker image to Artifact Registry</span>
+gcloud builds submit --tag \
+  <span class="c-yellow">gcr.io/agentflow-project/agentflow:v1</span>
+
+<span class="c-gray"># Deploy the image to Cloud Run</span>
+gcloud run deploy <span class="c-yellow">agentflow</span> \
+  --image <span class="c-yellow">gcr.io/agentflow-project/agentflow:v1</span> \
+  --region asia-south1 \
+  --allow-unauthenticated \
+  --memory 1Gi</pre>
+      </div>
+
+      <p style="font-weight:600;margin:16px 0 8px;">✅ After successful deploy, you'll see:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">output</span></div>
+        <pre>Deploying container to Cloud Run service [agentflow] in project [agentflow-project] region [asia-south1]
+✓ Deploying... Done.
+✓ Creating Revision...
+✓ Routing traffic...
+<span class="c-green">Done.</span>
+Service URL: <span class="c-green">https://agentflow-xxxxxxxx-el.a.run.app</span></pre>
+      </div>
+
+      <div class="url-box">
+        <div>
+          <div class="url-label">🌐 Your Live URL will look like:</div>
+          <div class="url-value">https://agentflow-xxxxxxxx-el.a.run.app</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 6: TEST ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#34a853;">6</div>
+      <div>
+        <h2>Test Your Live Agent</h2>
+        <p>Verify the deployment is working with these test commands</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — Replace URL with your actual Cloud Run URL</span></div>
+        <pre><span class="c-gray"># Save your URL</span>
+URL=<span class="c-yellow">https://agentflow-xxxxxxxx-el.a.run.app</span>
+
+<span class="c-gray"># Test 1: Health check</span>
+curl $URL/health
+<span class="c-gray"># Expected: {"status":"healthy"}</span>
+
+<span class="c-gray"># Test 2: Root endpoint</span>
+curl $URL/
+<span class="c-gray"># Expected: {"status":"AgentFlow is running!","version":"1.0.0"}</span>
+
+<span class="c-gray"># Test 3: Query the AI agent</span>
+curl -X POST $URL/agent/query \
+  -H <span class="c-green">"Content-Type: application/json"</span> \
+  -d <span class="c-green">'{"query": "What is AgentFlow?", "session_id": "test-1"}'</span></pre>
+      </div>
+
+      <div class="info-box green" style="margin-top:16px;">
+        <span class="info-icon">🎉</span>
+        <div><strong>Congratulations!</strong> Your AI Agent is now live on Google Cloud Run. Share the URL in your Gen AI Academy submission!</div>
+      </div>
+
+      <p style="font-weight:600;margin:16px 0 10px;">📊 Monitor your deployment:</p>
+      <div class="grid-2">
+        <div class="mini-card">
+          <h4>📈 View Logs</h4>
+          <p>Cloud Console → Cloud Run → agentflow → Logs tab</p>
+        </div>
+        <div class="mini-card">
+          <h4>⚙️ View Metrics</h4>
+          <p>Cloud Console → Cloud Run → agentflow → Metrics tab</p>
+        </div>
+        <div class="mini-card">
+          <h4>🔄 Redeploy</h4>
+          <p>Make code changes → run the same <code>gcloud run deploy</code> command again</p>
+        </div>
+        <div class="mini-card">
+          <h4>💰 Check Cost</h4>
+          <p>Cloud Console → Billing → Reports. Free tier = 2M requests/month</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TROUBLESHOOTING ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="step-badge" style="background:#6b7280;">🔧</div>
+      <div>
+        <h2>Troubleshooting Common Issues</h2>
+        <p>Quick fixes for the most common deployment errors</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <ul class="checklist">
+        <li><span class="check-icon">❌</span><div><strong>Error: "Billing account not found"</strong> → Go to console.cloud.google.com/billing and link a billing account to your project.</div></li>
+        <li><span class="check-icon">❌</span><div><strong>Error: "Permission denied on Vertex AI"</strong> → Run: <code>gcloud projects add-iam-policy-binding agentflow-project --member="serviceAccount:..." --role="roles/aiplatform.user"</code></div></li>
+        <li><span class="check-icon">❌</span><div><strong>Error: "Container failed to start"</strong> → Check logs: <code>gcloud run logs read --service agentflow --region asia-south1</code>. Usually a missing env variable.</div></li>
+        <li><span class="check-icon">❌</span><div><strong>Error: "API not enabled"</strong> → Run: <code>gcloud services enable run.googleapis.com aiplatform.googleapis.com</code></div></li>
+        <li><span class="check-icon">✅</span><div><strong>Tip:</strong> Always test locally first: <code>pip install -r requirements.txt && uvicorn main:app --reload</code> then visit <code>http://localhost:8000</code></div></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>AgentFlow — Gen AI Academy APAC Edition &nbsp;|&nbsp; <strong>Umesh Nithyanandh</strong> &nbsp;|&nbsp; Built with Google ADK + MCP + AlloyDB AI + Cloud Run</p>
+</footer>
+
+</body>
+</html>
